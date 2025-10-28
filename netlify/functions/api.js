@@ -40,9 +40,6 @@ const Guest = sequelize.define(
   {
     id: { type: DataTypes.INTEGER, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false },
-    email: { type: DataTypes.STRING },
-    phone: { type: DataTypes.STRING },
-    note: { type: DataTypes.TEXT },
   },
   { tableName: "guests", schema: "public", timestamps: false }
 );
@@ -131,9 +128,7 @@ app.get("/api/guests", async (req, res, next) => {
 
     const where = q
       ? {
-          [Op.or]: [
-            { name: { [Op.iLike]: `%${q}%` } },
-          ],
+          [Op.or]: [{ name: { [Op.iLike]: `%${q}%` } }],
         }
       : undefined;
 
@@ -165,10 +160,10 @@ app.get("/api/guests/:id", async (req, res, next) => {
 app.post("/api/guests", authRequired, async (req, res, next) => {
   try {
     // Whitelist allowed fields
-    const { name, email = null, phone = null, note = null } = req.body ?? {};
+    const { name } = req.body ?? {};
     if (!name) return res.status(400).json({ error: "name is required" });
 
-    const created = await Guest.create({ name, email, phone, note });
+    const created = await Guest.create({ name });
     res.status(201).json(created);
   } catch (err) {
     next(err);
@@ -183,7 +178,7 @@ app.patch("/api/guests/:id", authRequired, async (req, res, next) => {
 
     // Only update known fields
     const updates = {};
-    for (const k of ["name", "email", "phone", "note"]) {
+    for (const k of ["name"]) {
       if (k in req.body) updates[k] = req.body[k];
     }
 
