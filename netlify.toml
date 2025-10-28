@@ -1,10 +1,6 @@
-# netlify.toml
 [build]
-  functions = "netlify/functions"
-  publish   = "public"
+  command = "npm run build" # If you have a frontend build step
+  publish = "build"         # Directory where your static frontend files are
 
-# Local dev: let Netlify serve static files + emulate functions
-[dev]
-  # Do NOT set framework to "#custom"
-  # No command/targetPort needed for functions-only
-  autoLaunch = true
+[functions]
+  directory = "functions"   # Specifies the directory for your Netlify Functions
