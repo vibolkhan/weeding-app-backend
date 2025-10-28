@@ -1,51 +1,53 @@
 // netlify/functions/api.js
 import express from "express";
 import serverless from "serverless-http";
-import { Sequelize, DataTypes } from "sequelize";
+import { Sequelize, DataTypes, Op } from "sequelize";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const app = express();
 app.use(express.json());
 
-/* ---------------------- DB: Neon (Postgres) via Sequelize --------------------- */
-const url =
-  process.env.NETLIFY_DATABASE_URL || // Netlify Neon integration
-  process.env.DATABASE_URL; // fallback (add ?sslmode=require)
-
-if (!url) {
-  console.warn("DATABASE_URL/NETLIFY_DATABASE_URL is not set.");
-}
+/* --------------------------- DB: Neon (Postgres) --------------------------- */
+const url = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL;
+if (!url) console.warn("DATABASE_URL/NETLIFY_DATABASE_URL is not set");
 
 const sequelize = new Sequelize(url, {
   dialect: "postgres",
   dialectOptions: {
-    ssl: { require: true }, // Neon requires TLS
-    // For local cert issues, uncomment:
-    // ssl: { require: true, rejectUnauthorized: false },
+    ssl: { require: true },
+    // For local cert issues: ssl: { require: true, rejectUnauthorized: false }
   },
   pool: { max: 2, min: 0, idle: 10000, acquire: 20000 },
   logging: false,
 });
 
-// Minimal model for public.users
+// USERS TABLE (public.users)
 const User = sequelize.define(
   "User",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true },
     username: { type: DataTypes.STRING },
-    password: { type: DataTypes.STRING }, // stored hashed; never return to clients
+    password: { type: DataTypes.STRING }, // hashed
   },
-  {
-    tableName: "users",
-    schema: "public",
-    timestamps: false,
-  }
+  { tableName: "users", schema: "public", timestamps: false }
 );
 
-// small helper: sanitize user output
-const safeUser = (u) => (u ? { id: u.id, username: u.username } : null);
+// GUESTS TABLE (public.guests)
+// 👉 If your columns differ, edit below to match your Neon table.
+const Guest = sequelize.define(
+  "Guest",
+  {
+    id: { type: DataTypes.INTEGER, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    email: { type: DataTypes.STRING },
+    phone: { type: DataTypes.STRING },
+    note: { type: DataTypes.TEXT },
+  },
+  { tableName: "guests", schema: "public", timestamps: false }
+);
 
-// middleware to ensure DB is reachable (runs once per cold start)
+// Authenticate DB once per cold start
 let didAuth = false;
 app.use(async (_req, _res, next) => {
   if (!didAuth) {
@@ -60,47 +62,39 @@ app.use(async (_req, _res, next) => {
   next();
 });
 
-/* --------------------------------- Routes ---------------------------------- */
+/* ------------------------------- Auth utils ------------------------------- */
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 
-// Your sample routes
+function signToken(user) {
+  return jwt.sign({ uid: user.id, username: user.username }, JWT_SECRET, {
+    expiresIn: "12h",
+  });
+}
+
+function authRequired(req, res, next) {
+  try {
+    const hdr = req.headers.authorization || "";
+    const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Missing token" });
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
+
+/* --------------------------------- Sample --------------------------------- */
 app.get("/api/hello", (_req, res) =>
   res.json({ message: "Hello from Express on Netlify!" })
 );
-
 app.get("/api/time", (_req, res) =>
   res.json({ now: new Date().toISOString() })
 );
-
 app.post("/api/echo", (req, res) => res.json({ youSent: req.body ?? null }));
 
-// Users: list
-app.get("/api/users", async (_req, res, next) => {
-  try {
-    const rows = await User.findAll({
-      attributes: ["id", "username"],
-      order: [["id", "ASC"]],
-    });
-    res.json(rows.map(safeUser));
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Users: get by id
-app.get("/api/users/:id", async (req, res, next) => {
-  try {
-    const user = await User.findByPk(Number(req.params.id), {
-      attributes: ["id", "username"],
-    });
-    if (!user) return res.status(404).json({ error: "Not found" });
-    res.json(safeUser(user));
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Users: create (hash password)
-app.post("/api/users", async (req, res, next) => {
+/* --------------------------------- Login ---------------------------------- */
+// POST /api/login  { username, password }
+app.post("/api/login", async (req, res, next) => {
   try {
     const { username, password } = req.body ?? {};
     if (!username || !password)
@@ -108,37 +102,133 @@ app.post("/api/users", async (req, res, next) => {
         .status(400)
         .json({ error: "username and password are required" });
 
-    const hashed = await bcrypt.hash(String(password), 10);
-    const created = await User.create({
-      username: String(username),
-      password: hashed,
-    });
-    res.status(201).json(safeUser(created));
+    const user = await User.findOne({ where: { username: String(username) } });
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+    const ok = await bcrypt.compare(String(password), user.password);
+    if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+
+    const token = signToken(user);
+    res.json({ token, user: { id: user.id, username: user.username } });
   } catch (err) {
     next(err);
   }
 });
 
-// Users: update password (hash)
-app.patch("/api/users/:id/password", async (req, res, next) => {
+// GET /api/me  (authorization: Bearer <token>)
+app.get("/api/me", authRequired, async (req, res) => {
+  res.json({ user: req.user });
+});
+
+/* ------------------------------ Guests CRUD ------------------------------- */
+
+// GET /api/guests?limit=&offset=&q=
+app.get("/api/guests", async (req, res, next) => {
   try {
-    const { password } = req.body ?? {};
-    if (!password)
-      return res.status(400).json({ error: "password is required" });
+    const limit = Math.min(parseInt(req.query.limit || "50", 10), 200);
+    const offset = parseInt(req.query.offset || "0", 10);
+    const q = String(req.query.q || "").trim();
 
-    const user = await User.findByPk(Number(req.params.id));
-    if (!user) return res.status(404).json({ error: "Not found" });
+    const where = q
+      ? {
+          [Op.or]: [
+            { name: { [Op.iLike]: `%${q}%` } },
+            { email: { [Op.iLike]: `%${q}%` } },
+            { phone: { [Op.iLike]: `%${q}%` } },
+          ],
+        }
+      : undefined;
 
-    user.password = await bcrypt.hash(String(password), 10);
-    await user.save();
+    const { rows, count } = await Guest.findAndCountAll({
+      where,
+      order: [["id", "ASC"]],
+      limit,
+      offset,
+    });
 
-    res.json({ ok: true, user: safeUser(user) });
+    res.json({ count, rows });
   } catch (err) {
     next(err);
   }
 });
 
-// Simple health check that also pings DB time
+// GET /api/guests/:id
+app.get("/api/guests/:id", async (req, res, next) => {
+  try {
+    const guest = await Guest.findByPk(Number(req.params.id));
+    if (!guest) return res.status(404).json({ error: "Not found" });
+    res.json(guest);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/guests  (auth required)
+app.post("/api/guests", authRequired, async (req, res, next) => {
+  try {
+    // Whitelist allowed fields
+    const { name, email = null, phone = null, note = null } = req.body ?? {};
+    if (!name) return res.status(400).json({ error: "name is required" });
+
+    const created = await Guest.create({ name, email, phone, note });
+    res.status(201).json(created);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/guests/:id  (auth required)
+app.patch("/api/guests/:id", authRequired, async (req, res, next) => {
+  try {
+    const guest = await Guest.findByPk(Number(req.params.id));
+    if (!guest) return res.status(404).json({ error: "Not found" });
+
+    // Only update known fields
+    const updates = {};
+    for (const k of ["name", "email", "phone", "note"]) {
+      if (k in req.body) updates[k] = req.body[k];
+    }
+
+    await guest.update(updates);
+    res.json(guest);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUBLIC: get guest name by id
+app.get("/api/guests/:id/name", async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+
+    const guest = await Guest.findByPk(id, {
+      attributes: ["id", "name"], // only return these columns
+    });
+
+    if (!guest) return res.status(404).json({ error: "Not found" });
+
+    res.json(guest); // e.g., { "id": 12, "name": "Jane Doe" }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/guests/:id  (auth required)
+app.delete("/api/guests/:id", authRequired, async (req, res, next) => {
+  try {
+    const guest = await Guest.findByPk(Number(req.params.id));
+    if (!guest) return res.status(404).json({ error: "Not found" });
+    await guest.destroy();
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ------------------------------ Health check ------------------------------ */
 app.get("/api/health", async (_req, res, next) => {
   try {
     const [rows] = await sequelize.query("select now() as now");
@@ -148,7 +238,7 @@ app.get("/api/health", async (_req, res, next) => {
   }
 });
 
-// Error handler
+/* --------------------------------- Errors --------------------------------- */
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ ok: false, error: err?.message || "Internal Error" });
