@@ -1,10 +1,5 @@
 (() => {
   const CFG = window.APP_CONFIG ?? {};
-  window.APP_CONFIG = {
-    API_BASE: location.hostname.endsWith("netlify.app")
-      ? "/.netlify/functions/api"
-      : "http://localhost:4000/api",
-  };
 
   const KEYS = Object.assign(
     { TOKEN: "jwt", USER: "user" },
@@ -60,7 +55,7 @@
 
     try {
       setBusy(true);
-      const res = await fetch(`${window.APP_CONFIG?.API_BASE}/auth/login`, {
+      const res = await fetch(`${window.API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }), // BE expects username + password

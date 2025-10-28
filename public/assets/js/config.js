@@ -1,8 +1,10 @@
-window.APP_CONFIG = {
-  API_BASE: location.hostname.endsWith("netlify.app")
-    ? "/.netlify/functions/api"
-    : "http://localhost:4000/api",
-};
+(function () {
+  const base =
+    location.hostname === "localhost"
+      ? "http://localhost:4000/api"
+      : "https://weeding-app-api.netlify.app/.netlify/functions/api/api";
+  window.API_BASE = base;
+})();
 
 window.apiFetch = async function (path, options = {}) {
   const token = localStorage.getItem("jwt");
