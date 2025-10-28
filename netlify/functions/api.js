@@ -38,8 +38,9 @@ const User = sequelize.define(
 const Guest = sequelize.define(
   "Guest",
   {
-    id: { type: DataTypes.INTEGER, primaryKey: true },
-    name: { type: DataTypes.STRING, allowNull: false },
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true }, // ← important
+    name: { type: DataTypes.TEXT, allowNull: false },
+    code: { type: DataTypes.TEXT, allowNull: true, unique: true },
   },
   { tableName: "guests", schema: "public", timestamps: false }
 );
@@ -157,14 +158,27 @@ app.get("/api/guests/:id", async (req, res, next) => {
 });
 
 // POST /api/guests  (auth required)
-app.post("/api/guests", authRequired, async (req, res, next) => {
+// create guest (public or auth — as you need)
+app.post("/api/guests", async (req, res, next) => {
   try {
-    // Whitelist allowed fields
-    const { name } = req.body ?? {};
+    const { name, code } = req.body ?? {};
     if (!name) return res.status(400).json({ error: "name is required" });
 
-    const created = await Guest.create({ name });
-    res.status(201).json(created);
+    // sanitize payload: DO NOT pass `id` from client
+    const payload = { name };
+
+    // if your schema has code NOT NULL/UNIQUE, either require it or generate it:
+    if (code) {
+      payload.code = String(code).trim();
+    } else {
+      // simple auto code; swap for nanoid/uuid if you prefer
+      payload.code = "G" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    }
+
+    const created = await Guest.create(payload, { fields: ["name", "code"] });
+    res
+      .status(201)
+      .json({ id: created.id, name: created.name, code: created.code });
   } catch (err) {
     next(err);
   }
