@@ -1,6 +1,4 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-dotenv.config();
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -9,9 +7,9 @@ export function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // { id, email, role }
+    req.user = payload;
     next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
   }
 }

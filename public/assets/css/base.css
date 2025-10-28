@@ -1,0 +1,39 @@
+
+/* Animations & utilities */
+@keyframes breathing {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px 0 rgba(236, 72, 153, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px 0 rgba(236, 72, 153, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px 0 rgba(236, 72, 153, 0.4);
+  }
+}
+.animate-breathing { animation: breathing 2.5s ease-in-out infinite; }
+[x-cloak] { display: none !important; }
+
+/* Minimal preflight helpers you had inline.
+   If you rely on Tailwind, keep your existing linked CSS files too. */
+*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}
+::after,::before{--tw-content:''}
+:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;
+  font-family:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+  -webkit-tap-highlight-color:transparent}
+body{margin:0;line-height:inherit}
+
+/* Add-to-Calendar Button global overrides (from #atcb-global-style) */
+.atcb-modal-no-scroll{overflow-y:hidden!important;-webkit-overflow-scrolling:touch;}
+body.atcb-modal-no-scroll{padding-right:10px;}
+.atcb-attribution{display:none;}
+
+/* Optional custom scrollbar styles you had commented:
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #888; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+*/

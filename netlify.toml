@@ -1,0 +1,10 @@
+# netlify.toml
+[build]
+  functions = "netlify/functions"
+  publish   = "public"
+
+# Local dev: let Netlify serve static files + emulate functions
+[dev]
+  # Do NOT set framework to "#custom"
+  # No command/targetPort needed for functions-only
+  autoLaunch = true
