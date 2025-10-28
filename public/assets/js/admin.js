@@ -18,7 +18,7 @@ function inviteLinkFor(code) {
 }
 
 function rowTpl(g) {
-  const link = inviteLinkFor(g.code);
+  const link = inviteLinkFor(g.id);
   return `
     <tr data-id="${g.id}">
       <td>
