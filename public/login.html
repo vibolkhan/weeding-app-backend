@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="./assets/css/style.css" rel="stylesheet" />
+  <link href="./assets/css/login.css" rel="stylesheet" />
+</head>
+<body class="bg-gradient center">
+  <div class="card">
+    <div class="title">Admin Login</div>
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="admin@example.com" autocomplete="username" />
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    <button class="btn" id="loginBtn">Sign in</button>
+    <div class="err" id="error"></div>
+    <div class="hint">Use your admin account to access the dashboard.</div>
+  </div>
+  <script src="./assets/js/auth.js"></script>
+</body>
+</html>
