@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3999/api';
+const API_BASE = 'https://weeding-app-api.netlify.app/api';
 
 const emailEl = document.getElementById('email');
 const passEl  = document.getElementById('password');
@@ -12,18 +12,18 @@ function saveToken(token, user) {
 
 btn?.addEventListener('click', async () => {
   errEl.textContent = '';
-  const email = (emailEl?.value || '').trim();
+  const username = (emailEl?.value || '').trim();
   const password = passEl?.value || '';
 
-  if (!email || !password) {
-    errEl.textContent = 'Please enter email and password.';
+  if (!username || !password) {
+    errEl.textContent = 'Please enter username and password.';
     return;
   }
   try {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ username, password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'Login failed');
