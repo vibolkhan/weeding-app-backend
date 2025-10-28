@@ -1,4 +1,4 @@
-const API_BASE = 'https://weeding-app-api.netlify.app/api';
+const API_BASE = 'https://my-weeding-app.netlify.app/api';
 
 const emailEl = document.getElementById('email');
 const passEl  = document.getElementById('password');

@@ -1,5 +1,5 @@
 (function () {
-  const API_BASE = "https://weeding-app-api.netlify.app/api";
+  const API_BASE = "https://my-weeding-app.netlify.app/api";
   const token = localStorage.getItem("jwt");
   const params = new URLSearchParams(window.location.search);
   const code = params.get("guest");
