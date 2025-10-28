@@ -1,6 +1,14 @@
 [build]
-  command = "npm run build" # If you have a frontend build step
-  publish = "build"         # Directory where your static frontend files are
+  publish = "public"
+  # If you have a frontend build, set it here, e.g.
+  # command = "npm run build"
 
 [functions]
-  directory = "functions"   # Specifies the directory for your Netlify Functions
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Route all /api/* to the Express app inside the "api" function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
