@@ -1,19 +1,21 @@
-// assets/js/invite.js
-(function () {
-  const params = new URLSearchParams(location.search);
-  const code = params.get('guest');
-  if (!code) return;
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("guest");
+  if (!code) return; // no code in link, nothing to show
 
-  const nameEl = document.getElementById('guest-name');
-  if (!nameEl) return;
+  const API_BASE = window.APP_CONFIG?.API_BASE || "http://localhost:4000/api";
 
-  // This endpoint should NOT require JWT
-  fetch(`${window.API_BASE}/guests/by-code/${encodeURIComponent(code)}`)
-    .then(r => r.ok ? r.json() : Promise.reject(r))
-    .then(g => {
-      if (g?.name) nameEl.textContent = g.name;
+  fetch(`${API_BASE}/guests/public/by-code/${encodeURIComponent(code)}`)
+    .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+    .then((g) => {
+      if (g?.name) {
+        const el = document.getElementById("guest-name"); // <div id="guest-name"></div>
+        if (el) el.textContent = g.name;
+      }
     })
     .catch(() => {
-      // silently ignore
+      // optional: keep silent or show a fallback
+      const el = document.getElementById("guest-name");
+      if (el) el.textContent = "";
     });
 })();
