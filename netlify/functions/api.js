@@ -133,8 +133,6 @@ app.get("/api/guests", async (req, res, next) => {
       ? {
           [Op.or]: [
             { name: { [Op.iLike]: `%${q}%` } },
-            { email: { [Op.iLike]: `%${q}%` } },
-            { phone: { [Op.iLike]: `%${q}%` } },
           ],
         }
       : undefined;
