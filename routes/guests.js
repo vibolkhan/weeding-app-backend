@@ -1,21 +1,21 @@
 import { Router } from "express";
-import { getPool } from "../db.js";
-// import jwt from "jsonwebtoken";
+import { getPool } from "../netlify/functions/db.js";
+import jwt from "jsonwebtoken";
 
 const router = Router();
 
 // auth middleware for admin endpoints
-// function auth(req, res, next) {
-//   const hdr = req.headers.authorization || "";
-//   const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : "";
-//   if (!token) return res.status(401).json({ error: "Missing token" });
-//   try {
-//     req.user = jwt.verify(token, process.env.JWT_SECRET);
-//     next();
-//   } catch {
-//     return res.status(401).json({ error: "Invalid token" });
-//   }
-// }
+function auth(req, res, next) {
+  const hdr = req.headers.authorization || "";
+  const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : "";
+  if (!token) return res.status(401).json({ error: "Missing token" });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
 
 // public (no token) – invite page uses this
 router.get("/guests/public/by-code/:code", async (req, res) => {

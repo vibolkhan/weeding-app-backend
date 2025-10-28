@@ -1,14 +1,19 @@
 [build]
   publish = "public"
-  # If you have a frontend build, set it here, e.g.
-  # command = "npm run build"
 
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  external_node_modules = ["sequelize", "pg", "pg-hstore", "pg-native"]
 
-# Route all /api/* to the Express app inside the "api" function
+# Route Express API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api"
+  status = 200
+
+# Route DB test
+[[redirects]]
+  from = "/db"
+  to = "/.netlify/functions/db"
   status = 200

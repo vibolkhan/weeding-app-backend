@@ -1,0 +1,12 @@
+{
+  "development": {
+    "use_env_variable": "NETLIFY_DATABASE_URL",
+    "dialect": "postgres",
+    "dialectOptions": { "ssl": { "require": true } }
+  },
+  "production": {
+    "use_env_variable": "NETLIFY_DATABASE_URL_UNPOOLED",
+    "dialect": "postgres",
+    "dialectOptions": { "ssl": { "require": true } }
+  }
+}
