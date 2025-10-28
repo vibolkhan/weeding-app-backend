@@ -3,9 +3,17 @@
   const code = params.get("guest");
   if (!code) return; // no code in link, nothing to show
 
-  const API_BASE = window.APP_CONFIG?.API_BASE || "http://localhost:4000/api";
+  window.APP_CONFIG = {
+    API_BASE: location.hostname.endsWith("netlify.app")
+      ? "/.netlify/functions/api"
+      : "http://localhost:4000/api",
+  };
 
-  fetch(`${API_BASE}/guests/public/by-code/${encodeURIComponent(code)}`)
+  fetch(
+    `${window.APP_CONFIG?.API_BASE}/guests/public/by-code/${encodeURIComponent(
+      code
+    )}`
+  )
     .then((r) => (r.ok ? r.json() : Promise.reject(r)))
     .then((g) => {
       if (g?.name) {
